@@ -22,11 +22,12 @@ namespace stest1
              
             while (!exit.Sample())
             {
+                W("You: ");
                 csInput.Send(Console.ReadLine());
-                Console.WriteLine("word count: " + tokens.Sample().Count);
-                Console.WriteLine(randomWord.Sample() ? GetRandomIndexOf(tokens.Sample()) : cOutput.Sample());
+                W("SodiumBot: ");
+                Wl(randomWord.Sample() ? GetRandomIndexOf(tokens.Sample()) : cOutput.Sample());
+                Wl(tokens.Sample().Count > 3 ? "word count: " + tokens.Sample().Count : string.Empty);
             }
-
             Console.ReadKey();
         }
 
@@ -72,6 +73,16 @@ namespace stest1
         private static List<string> Tokenize(string input)
         {
             return input.Split(' ').ToList();
+        }
+
+        private static void Wl(string x)
+        {
+            Console.WriteLine(x);
+        }
+
+        private static void W(string x)
+        {
+            Console.Write(x);
         }
     }
 }
