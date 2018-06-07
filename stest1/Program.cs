@@ -7,28 +7,47 @@ namespace stest1
 {
     class Program
     {
-        static readonly Cell<List<string>> cGreetings = Cell.Constant(new List<string> { "hello", "hey", "hi", "sup", "howdy", "word", "greetings earthling" });
-        static readonly Cell<List<string>> cGoodbye = Cell.Constant(new List<string> { "goodbye", "bye", "later", "exit", "ciao", "out", "adios" }); 
+        private static readonly IReadOnlyList<string> cGreetings =
+            new[] {"hello", "hey", "hi", "sup", "howdy", "word", "greetings earthling"};
+
+        private static readonly IReadOnlyList<string> cGoodbye = new[]
+            {"goodbye", "bye", "later", "exit", "ciao", "out", "adios"};
 
         private static void Main(string[] args)
         {
-            CellSink<string> csInput = new CellSink<string>(string.Empty);
-            Cell<string> cInput = csInput.Map(x => x);
-            Cell<List<string>> tokens = cInput.Map(Tokenize);
+            StreamSink<string> ssInput = new StreamSink<string>();
+            Stream<IReadOnlyList<string>> sOutput = ssInput.Map(GetOutput);
+            Cell<bool> cExit = ssInput.Map(v => cGoodbye.Any(g => v == g)).Hold(false);
 
-            Cell<string> cOutput = cInput.Map(GetResponse);
-            Cell<bool> exit = cInput.Map(v => cGoodbye.Sample().Contains(v));
-            Cell<bool> randomWord = cInput.Map(i => i.Contains("random"));
-             
-            while (!exit.Sample())
+            using (sOutput.Listen(
+                outputLines =>
+                {
+                    foreach (string outputLine in outputLines)
+                    {
+                        Wl(outputLine);
+                    }
+                }))
             {
-                W("You: ");
-                csInput.Send(Console.ReadLine());
-                W("SodiumBot: ");
-                Wl(randomWord.Sample() ? GetRandomIndexOf(tokens.Sample()) : cOutput.Sample());
-                Wl(tokens.Sample().Count > 3 ? "word count: " + tokens.Sample().Count : string.Empty);
+                while (!cExit.Sample())
+                {
+                    W("You: ");
+                    ssInput.Send(Console.ReadLine());
+                }
             }
-            Console.ReadKey();
+
+            Wl(string.Empty);
+            Wl("Press enter to exit...");
+            Console.ReadLine();
+        }
+
+        static IReadOnlyList<string> GetOutput(string input)
+        {
+            IReadOnlyList<string> tokens = Tokenize(input);
+
+            return new[] {input.Contains("random") ? GetRandomIndexOf(tokens) : GetResponse(input)}.Concat(
+                tokens.Count > 3
+                    ? new[] {"word count: " + tokens.Count}
+                    : new string[0]).ToArray();
         }
 
         static string GetResponse(string input)
@@ -44,25 +63,25 @@ namespace stest1
 
         private static bool IsGreeting(string t)
         {
-            return cGreetings.Sample().Contains(t);
+            return cGreetings.Any(v => v == t);
         }
 
         private static bool IsGoodbye(string t)
         {
-            return cGoodbye.Sample().Contains(t);
+            return cGoodbye.Any(v => v == t);
         }
 
         private static string GetGreeting()
         {
-            return GetRandomIndexOf(cGreetings.Sample());
+            return GetRandomIndexOf(cGreetings);
         }
 
         private static string GetGoodbye()
         {
-            return GetRandomIndexOf(cGoodbye.Sample());
+            return GetRandomIndexOf(cGoodbye);
         }
 
-        private static string GetRandomIndexOf(List<string> coll)
+        private static string GetRandomIndexOf(IReadOnlyList<string> coll)
         {
             var topRange = coll.Count;
             var r = new Random();
@@ -70,7 +89,7 @@ namespace stest1
             return coll[i];
         }
 
-        private static List<string> Tokenize(string input)
+        private static IReadOnlyList<string> Tokenize(string input)
         {
             return input.Split(' ').ToList();
         }
